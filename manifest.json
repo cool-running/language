@@ -1,6 +1,6 @@
 {
-  "name": "외국어 복습 게임",
-  "short_name": "복습게임",
+  "name": "외국어 복습",
+  "short_name": "외국어 복습",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
