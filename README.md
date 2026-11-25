@@ -42,7 +42,7 @@ language/
 ├─ index.html          ← 복습 도구 (notes 폴더의 노트를 읽어서 카드를 만듦)
 ├─ img/kana/           ← 50음도 연상 그림
 └─ notes/
-   ├─ index.json       ← 게임이 읽을 노트 목록
+   ├─ index.json       ← 복습 도구가 읽을 노트 목록
    ├─ 일본어/날짜.md
    └─ 영어/날짜-회차.md
 ```
