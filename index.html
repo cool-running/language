@@ -92,6 +92,19 @@ main{max-width:760px;margin:auto;padding:18px max(4vw,14px) 48px}
 dialog{border:0;border-radius:20px;padding:20px;width:min(560px,94vw);background:var(--bg);color:var(--ink)}
 dialog::backdrop{background:rgba(0,0,0,.5)}
 textarea{width:100%;min-height:180px;font:16px/1.5 "Noto Sans JP","Noto Sans KR";border:2px solid var(--line);border-radius:12px;padding:10px;background:var(--bg);color:var(--ink)}
+.goj{display:grid;grid-template-columns:3.2em repeat(5,minmax(0,1fr));gap:6px;margin-top:10px}
+.goj .rh{display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--mute);font-weight:700}
+.gc{border:0;border-radius:12px;background:var(--card);color:var(--ink);min-height:62px;padding:4px 2px;cursor:pointer;font:800 26px/1.1 "Noto Sans JP","Noto Sans KR";position:relative}
+.gc small{display:block;font:700 12px "Noto Sans KR";color:var(--mute);margin-top:2px}
+.gc.new{opacity:.45}.gc.empty{visibility:hidden}
+.gc.pic::after{content:"";position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:9px;background:var(--c)}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9}
+.ovc{background:var(--bg);border-radius:22px;width:min(520px,100%);max-height:94vh;overflow:auto;padding:18px;text-align:center}
+.ovc img{width:100%;border-radius:14px;display:block;margin:10px 0}
+.ovc .k{font:800 64px/1 "Noto Sans JP";color:var(--c)}
+.ovc .r{font-size:20px;font-weight:700;margin-top:4px}
+.ovc .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.rvimg{width:120px;border-radius:10px}
 .hide{display:none!important}
 @media(max-width:420px){.grid{gap:9px}.tile{padding:14px}.mt{font-size:14px;min-height:70px}}
 </style>
@@ -206,6 +219,7 @@ function buildPool(){
     return s.concat(w)}
   return items().filter(x=>!/ \/ |\(/.test(x.e)).map(x=>{const e=x.e.replace(/^\.\.\./,'');return {parts:e.split(' '),sep:' ',tgt:e,m:x.m,id:iid(x)}}).filter(x=>x.parts.length>=3&&x.parts.length<=11)}
 const MODES=[
+ {id:'goj',g:'表',t:'50음도',d:'글자를 누르면 연상 그림과 발음'},
  {id:'m2w',g:'?',t:'뜻 보고 고르기',d:'한국어 뜻을 보고 맞는 표현 고르기'},
  {id:'w2m',g:'あ',t:'읽고 뜻 고르기',d:'표현을 읽고 뜻 고르기'},
  {id:'kana',g:'か',t:'글자 읽기',d:'히라가나 한 글자 ↔ 한글 소리'},
@@ -225,7 +239,7 @@ function home(){
   const bp=buildPool().length,tp=traps().length;
   $('modes').innerHTML=MODES.map(m=>{
     let d=m.d,dis=false;
-    if(m.id==='kana'&&S.lang!=='jp')return '';
+    if((m.id==='kana'||m.id==='goj')&&S.lang!=='jp')return '';
     if(m.id==='w2m'&&S.lang==='en')m={...m,g:'Aa'};
     if(m.id==='trap')d=S.lang==='jp'?'헷갈리는 글자(か↔き, さ↔ち, な↔た…) 중 맞는 읽기':'자주 한 실수 vs 맞는 문장';
     if(m.id==='listen'&&!tts){dis=true;d='이 화면에서는 음성 기능을 쓸 수 없어요'}
@@ -254,6 +268,7 @@ function start(mode){
       if(id.startsWith('x|')){const x=ENX.find(y=>xid(y)===id);return x&&{type:'trap',x}}
       const x=findAny(id);if(!x)return null;
       const d=Math.random()<.5?'m2w':'w2m',src2=x.kana?KANA:full;return {type:'quiz',dir:d,x,o:opts(x,src2,d==='w2m'?(y=>y.m):word)}}).filter(Boolean)}
+  if(mode==='goj'){G={mode};return renderGoj()}
   if(mode==='match'){G={mode,score:0,total:6,miss:[],t0:Date.now()};return renderMatch()}
   if(!qs.length)return home();
   G={mode,qs,i:0,score:0,total:qs.length,miss:[]};
@@ -295,6 +310,7 @@ function reveal(ok,q){
   const spk=S.lang==='jp'&&q.type==='trap'?q.x.k:w;
   $('rv').innerHTML=`<div class="reveal"><div class="w"><span class="${ok?'ok-t':'bad-t'}" style="font-weight:900">${ok?'정답!':'아쉬워요'}</span><b class="${S.lang==='jp'?'jpf':''}">${esc(w)}</b><small>${esc(sub)}</small></div>${tts?'<button class="btn ghost" id="spk">발음 듣기</button>':''}<button class="btn" id="next">다음</button>${rule?`<div class="rule">${esc(rule)}</div>`:''}</div>`;
   $('rv').dataset.say=spk;
+  {const kx=q.x&&q.x.kana?q.x.k:null;if(kx&&IMG[kx]){const im=document.createElement('img');im.src=IMG[kx];im.className='rvimg';im.alt='';$('rv').querySelector('.reveal').prepend(im)}}
   if(S.auto&&tts)say(spk);
   G.score+=ok?1:0;
   const id=q.type==='trap'?(S.lang==='jp'?iid(q.x):xid(q.x)):q.type==='quiz'?iid(q.x):q.b.id;
@@ -360,6 +376,7 @@ $('autoBtn').addEventListener('click',()=>{S.auto=!S.auto;save();home()});
 $('play').addEventListener('click',e=>{
   const t=e.target;
   if(t.closest('#quit')||t.closest('#home2'))return home();
+  if(G&&G.mode==='goj')return gojTap(t);
   if(t.closest('#again'))return start(G.mode);
   if(t.closest('#rev'))return start('review');
   if(t.closest('#replay'))return say(word(G.qs[G.i].x));
@@ -372,7 +389,46 @@ $('play').addEventListener('click',e=>{
   if(t.closest('.pc'))return buildTap(e);
 });
 if(tts)try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>{}}catch(e){}
-home();loadNotes();
+
+/* ---------- 50음도 + 연상 이미지 (이미지는 이 폰 안에만 저장) ---------- */
+const GOJ=[['あ','あいうえお','아 이 우 에 오'],['か','かきくけこ','카 키 쿠 케 코'],['さ','さしすせそ','사 시 스 세 소'],['た','たちつてと','타 치 츠 테 토'],['な','なにぬねの','나 니 누 네 노'],['は','はひふへほ','하 히 후 헤 호'],['ま','まみむめも','마 미 무 메 모'],['や','や_ゆ_よ','야 _ 유 _ 요'],['ら','らりるれろ','라 리 루 레 로'],['わ','わ___を','와 _ _ _ 오'],['ん','ん____','응 _ _ _ _']]
+  .map(([h,ks,rs])=>({h,cells:Array.from(ks).map((k,i)=>k==='_'?null:{k,p:rs.split(' ')[i]})}));
+const GLIST=GOJ.flatMap(r=>r.cells.filter(Boolean));
+const FILEMAP={};GLIST.forEach(c=>{if(c.k!=='を')FILEMAP[c.p]=c.k});FILEMAP['오(2)']='を';FILEMAP['を']='を';GLIST.forEach(c=>FILEMAP[c.k]=c.k);
+const IMG={};
+function idb(){return new Promise((res,rej)=>{try{const o=indexedDB.open('kanaImg',1);o.onupgradeneeded=()=>o.result.createObjectStore('img');o.onsuccess=()=>res(o.result);o.onerror=()=>rej(o.error)}catch(e){rej(e)}})}
+async function loadImgs(){try{const db=await idb();const st=db.transaction('img').objectStore('img');const keys=await new Promise(r=>{const q=st.getAllKeys();q.onsuccess=()=>r(q.result)});for(const k of keys){const b=await new Promise(r=>{const q=db.transaction('img').objectStore('img').get(k);q.onsuccess=()=>r(q.result)});if(b)IMG[k]=URL.createObjectURL(b)}}catch(e){}}
+async function saveImgs(files){
+  let n=0,skip=[];const db=await idb();
+  for(const f of files){
+    const stem=f.name.replace(/\.[^.]+$/,'').normalize('NFC').trim();const k=FILEMAP[stem];
+    if(!k){skip.push(f.name);continue}
+    await new Promise((res,rej)=>{const tx=db.transaction('img','readwrite');tx.objectStore('img').put(f,k);tx.oncomplete=res;tx.onerror=()=>rej(tx.error)});
+    if(IMG[k])URL.revokeObjectURL(IMG[k]);IMG[k]=URL.createObjectURL(f);n++;
+  }
+  return {n,skip};
+}
+function renderGoj(msg){
+  const learned=new Set(KANA.map(x=>x.k)),cnt=Object.keys(IMG).length;
+  $('home').classList.add('hide');$('play').classList.remove('hide');
+  $('play').innerHTML=`<div class="bar"><button class="x" id="quit" aria-label="닫기">✕</button><b style="flex:1;font-size:20px">50음도</b><span class="sc">그림 ${cnt}/46</span></div>
+  <p class="note" style="margin:0">진한 글자는 노트에서 배운 글자예요. 점이 있는 글자는 연상 그림이 있어요.</p>
+  <div class="goj">${GOJ.map(r=>`<div class="rh">${r.h}행</div>`+r.cells.map(c=>c?`<button class="gc${learned.has(c.k)?'':' new'}${IMG[c.k]?' pic':''}" data-k="${c.k}">${c.k}<small>${c.p}</small></button>`:'<span class="gc empty"></span>').join('')).join('')}</div>
+  <div class="tools"><label class="btn ghost" style="display:inline-flex;align-items:center;cursor:pointer">연상 그림 불러오기<input type="file" id="imgIn" accept="image/*" multiple hidden></label></div>
+  <p class="note">${msg?esc(msg):'폰에 있는 그림 파일(아.png, 카.png …)을 한 번에 고르면 글자에 자동으로 연결돼요. 그림은 이 폰에만 저장되고 인터넷에 올라가지 않아요.'}</p>`;
+  $('imgIn').addEventListener('change',async e=>{const fs=[...e.target.files];if(!fs.length)return;try{const r=await saveImgs(fs);renderGoj(`${r.n}장 연결했어요.`+(r.skip.length?` 이름을 못 알아본 파일: ${r.skip.slice(0,5).join(', ')}`:''))}catch(err){renderGoj('그림을 저장하지 못했어요. 브라우저 저장 공간을 확인해 주세요.')}});
+}
+let OVI=-1;
+function showCard(i){
+  OVI=(i+GLIST.length)%GLIST.length;const c=GLIST[OVI];
+  let ov=$('ov');if(!ov){ov=document.createElement('div');ov.id='ov';ov.className='ov';document.body.appendChild(ov);ov.addEventListener('click',e=>{const t=e.target;if(t===ov||t.closest('#ovx'))return ov.remove();if(t.closest('#ovp'))return showCard(OVI-1);if(t.closest('#ovn'))return showCard(OVI+1);if(t.closest('#ovs'))return say(c2().k)})}
+  ov.innerHTML=`<div class="ovc"><div class="k">${c.k}</div><div class="r">${c.p}</div>${IMG[c.k]?`<img src="${IMG[c.k]}" alt="${c.k} 연상 그림">`:'<p class="note">이 글자의 연상 그림이 아직 없어요.</p>'}<div class="row"><button class="btn ghost" id="ovp">◀ 이전</button>${tts?'<button class="btn" id="ovs">발음 듣기</button>':''}<button class="btn ghost" id="ovn">다음 ▶</button></div><div class="row"><button class="btn ghost" id="ovx">닫기</button></div></div>`;
+  if(S.auto&&tts)say(c.k);
+}
+const c2=()=>GLIST[OVI];
+function gojTap(t){const b=t.closest('.gc[data-k]');if(b)showCard(GLIST.findIndex(c=>c.k===b.dataset.k))}
+document.addEventListener('keydown',e=>{if(!$('ov'))return;if(e.key==='ArrowLeft')showCard(OVI-1);if(e.key==='ArrowRight')showCard(OVI+1);if(e.key==='Escape')$('ov').remove()});
+home();loadNotes();loadImgs();
 if('serviceWorker' in navigator)try{navigator.serviceWorker.register('sw.js')}catch(e){}
 }
 </script>
