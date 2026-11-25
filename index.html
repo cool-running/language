@@ -218,15 +218,16 @@ function gojScreen(){
   G={mode:'goj'}}
 let OVI=0;
 function kanaPop(i){OVI=(i+GLIST.length)%GLIST.length;const c=GLIST[OVI];let ov=$('ov');
-  if(!ov){ov=document.createElement('div');ov.id='ov';ov.className='ov';document.body.appendChild(ov);ov.addEventListener('click',e=>{const t=e.target;if(t===ov||t.closest('#ovx'))return ov.remove();if(t.closest('#ovp'))return kanaPop(OVI-1);if(t.closest('#ovn'))return kanaPop(OVI+1);if(t.closest('#ovs'))return say(GLIST[OVI].k,'jp');if(t.closest('#ovw')){ov.remove();writeScreen([GLIST[OVI].k])}})}
+  if(!ov){ov=document.createElement('div');ov.id='ov';ov.className='ov';document.body.appendChild(ov);ov.addEventListener('click',e=>{const t=e.target;if(t===ov||t.closest('#ovx'))return ov.remove();if(t.closest('#ovp'))return kanaPop(OVI-1);if(t.closest('#ovn'))return kanaPop(OVI+1);if(t.closest('#ovs'))return say(GLIST[OVI].k,'jp');if(t.closest('#ovw')){ov.remove();writeScreen([GLIST[OVI].k],{mode:'goj'})}})}
   ov.innerHTML=`<div class="ovc"><div class="kbig">${c.k}</div><div style="font-size:20px;font-weight:700">${c.p}</div><img class="pic" src="${imgOf(c.k)}" alt="${c.k} 연상 그림"><div class="row c"><button class="btn ghost sm" id="ovp">◀</button>${tts?'<button class="btn sm" id="ovs">발음</button>':''}<button class="btn sm ghost" id="ovw">써 보기</button><button class="btn ghost sm" id="ovn">▶</button></div><div class="row c" style="margin-top:8px"><button class="btn ghost sm" id="ovx">닫기</button></div></div>`;
   if(S.auto)say(c.k,'jp')}
 
 /* 따라 쓰기 */
 function writeList(){const r=S.kanaRow;if(r==='learned'){const l=learnedKana();return l.length?l.map(c=>c.k):GLIST.map(c=>c.k)}if(r==='all')return GLIST.map(c=>c.k);const row=GOJ.find(x=>x.h===r);return row?row.cells.filter(Boolean).map(c=>c.k):[]}
-function writeScreen(list){
+function writeScreen(list,back){
   const fixed=!!list;list=list||writeList();
-  G={mode:'write',list,i:0,guide:true,fixed};drawWrite()}
+  G={mode:'write',list,i:0,guide:true,fixed,back};drawWrite()}
+function goBack(b){G=b;if(b.mode==='card')return drawCard();if(b.mode==='goj')return gojScreen();home()}
 function drawWrite(){
   const g=G,k=g.list[g.i],kc=GLIST.find(c=>c.k===k),info=kc?kc.p:(JP.find(x=>x.k===k)||{}).p||'';
   const rows=['learned','all',...GOJ.map(r=>r.h)];
@@ -234,7 +235,7 @@ function drawWrite(){
   `<div class="card center" style="padding:14px"><div class="ask">${g.guide?'연한 글자를 따라 써 보세요':'가이드 없이 써 보세요 → 「겹쳐 보기」로 확인'}</div><div class="mid jpf">${esc(k)} <span style="font-size:16px;color:var(--mute)">${esc(info)}</span></div></div>
   <div class="pad" id="pad"><canvas id="cg"></canvas><canvas id="ci"></canvas></div>
   <div class="row c" style="margin-top:12px"><button class="btn ghost sm" id="wclr">지우기</button><button class="btn ghost sm" id="wgd">${g.guide?'가이드 숨기기':'겹쳐 보기'}</button>${tts?'<button class="btn ghost sm" id="wsay">발음</button>':''}</div>
-  <div class="row c" style="margin-top:8px"><button class="btn ghost" id="wprev">◀ 이전</button><span style="font-weight:800">${g.i+1}/${g.list.length}</span><button class="btn" id="wnext">다음 ▶</button></div>`);
+  ${g.back?`<div class="row c" style="margin-top:12px"><button class="btn" id="wback" style="width:100%">${g.back.mode==='card'?'카드로 돌아가서 계속하기':'50음도로 돌아가기'}</button></div>`:`<div class="row c" style="margin-top:8px"><button class="btn ghost" id="wprev">◀ 이전</button><span style="font-weight:800">${g.i+1}/${g.list.length}</span><button class="btn" id="wnext">다음 ▶</button></div>`}`);
   setupPad(k)}
 function setupPad(k){
   const pad=$('pad'),cg=$('cg'),ci=$('ci'),dpr=window.devicePixelRatio||1,W=pad.clientWidth;
@@ -322,6 +323,7 @@ $('home').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(!
 function next(){G.i++;G.stage='q';G.said='';G.flip=false;({card:drawCard,speak:drawSpeak,fix:drawFix,dict:drawDict})[G.mode]();if(G.mode==='dict'&&G.i<G.items.length)setTimeout(()=>say(G.items[G.i].e,'en'),300)}
 $('play').addEventListener('click',e=>{
   const t=e.target,q=s=>t.closest(s);
+  if(q('#quit')&&G&&G.mode==='write'&&G.back)return goBack(G.back);
   if(q('#quit')||q('#home2'))return home();
   const sy=q('[data-say]');if(sy)return say(sy.dataset.say,'jp');
   const se=q('[data-sayen]');if(se)return say(se.dataset.sayen,'en');
@@ -330,13 +332,13 @@ $('play').addEventListener('click',e=>{
   const rb=q('[data-r]');if(rb){const x=G.items[G.i];const id=G.mode==='card'?G.idf(x):G.mode==='speak'?enId(x):G.mode==='fix'?fxId(x):dcId(x);rate(id,+rb.dataset.r);if(rb.dataset.r==='0'&&!x._again){G.items.push({...x,_again:1})}return next()}
   switch(G&&G.mode){
     case 'goj':{const b=q('.gc[data-k]');if(b)kanaPop(GLIST.findIndex(c=>c.k===b.dataset.k));return}
-    case 'write':{const r=q('[data-row]');if(r){S.kanaRow=r.dataset.row;save();return writeScreen()}
+    case 'write':{if(q('#wback'))return goBack(G.back);const r=q('[data-row]');if(r){S.kanaRow=r.dataset.row;save();return writeScreen()}
       if(q('#wclr')){const c=G.ink;c.getContext('2d').clearRect(0,0,c.width,c.height);return}
       if(q('#wgd')){G.guide=!G.guide;if(!G.ink)return drawWrite();const img=G.ink.toDataURL();drawWrite();const im=new Image();im.onload=()=>{const c=G.ink,d=window.devicePixelRatio||1;c.getContext('2d').drawImage(im,0,0,c.width/d,c.height/d)};im.src=img;return}
       if(q('#wsay'))return say(G.list[G.i],'jp');
       if(q('#wprev')){G.i=(G.i-1+G.list.length)%G.list.length;G.guide=true;return drawWrite()}
       if(q('#wnext')){G.i=(G.i+1)%G.list.length;G.guide=true;return drawWrite()}return}
-    case 'card':{if(q('#cflip')){G.flip=true;return drawCard()}if(q('#csay'))return say(G.items[G.i].k,'jp');if(q('#cwrite'))return writeScreen([G.items[G.i].k]);return}
+    case 'card':{if(q('#cflip')){G.flip=true;return drawCard()}if(q('#csay'))return say(G.items[G.i].k,'jp');if(q('#cwrite'))return writeScreen([G.items[G.i].k],G);return}
     case 'weak':{if(q('#wkgo')){const ks=G.wk.filter(x=>x.kind==='k'),ws=G.wk.filter(x=>x.kind==='w');return ws.length?cardScreen('w',ws):cardScreen('k',ks)}return}
     case 'speak':case 'fix':case 'dict':{const x=G.items[G.i];
       if(q('#star')){if(x.own)return;if(S.star[x.e])delete S.star[x.e];else S.star[x.e]=1;save();return drawSpeak()}
