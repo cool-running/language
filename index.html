@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>외국어 복습 게임</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#d9381e">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;800&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
@@ -369,6 +373,7 @@ $('play').addEventListener('click',e=>{
 });
 if(tts)try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>{}}catch(e){}
 home();loadNotes();
+if('serviceWorker' in navigator)try{navigator.serviceWorker.register('sw.js')}catch(e){}
 }
 </script>
 </body>
