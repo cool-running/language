@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>외국어 복습 게임</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;800&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+/* VOICE: 밝고 빠른 문제풀이, 매일 10분 복습용
+   IDEA: 여행 가방에 넣는 단어 카드 묶음 — 한 장씩 넘기는 카드
+   PICTURE: 게임 화면 자체(큰 카드 + 큰 보기 버튼)
+   COLOUR and TYPE: 일본어=주홍 #d9381e, 영어=파랑 #1d5fd0, 노랑 강조 / Noto Sans KR + JP
+   LAYOUT: 언어색 띠 머리 → 회차 칩 → 게임 타일 2열, 플레이는 한 열 */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#141210);--ink:light-dark(#1a1714,#f3efe9);--mute:light-dark(#6b645c,#a79f95);--card:light-dark(#f3f0eb,#221f1b);--line:light-dark(#e2ddd5,#38332d);--jp:#d9381e;--en:#1d5fd0;--acc:#ffc93c;--ok:#178a52;--bad:#d23434;--c:var(--jp)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Noto Sans KR",system-ui,sans-serif;overflow-x:clip}
+body.en{--c:var(--en)}
+.jpf{font-family:"Noto Sans JP","Noto Sans KR",sans-serif}
+header{background:var(--c);color:#fff;padding:18px max(5vw,16px) 22px;transition:background .3s}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;max-width:760px;margin:auto}
+h1{margin:0;font-size:clamp(26px,6vw,36px);line-height:1.05;font-weight:900}
+.seg{display:flex;background:rgba(0,0,0,.18);border-radius:999px;padding:4px}
+.seg button{border:0;background:none;color:#fff;font:700 15px "Noto Sans KR";padding:8px 16px;border-radius:999px;min-height:40px;cursor:pointer}
+.seg button.on{background:#fff;color:var(--c)}
+.sub{max-width:760px;margin:10px auto 0;font-size:14px;opacity:.92}
+main{max-width:760px;margin:auto;padding:18px max(4vw,14px) 48px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.chip{border:1.5px solid var(--line);background:none;color:var(--ink);border-radius:999px;padding:7px 14px;font:700 14px "Noto Sans KR";min-height:38px;cursor:pointer}
+.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.tile{position:relative;text-align:left;border:0;background:var(--card);color:var(--ink);border-radius:18px;padding:16px 16px 18px;cursor:pointer;min-height:132px;font:inherit;overflow:hidden}
+.tile b{display:block;font-size:18px;margin-top:34px}
+.tile span{display:block;font-size:13px;color:var(--mute);line-height:1.4}
+.tile i{position:absolute;top:10px;left:16px;font:900 30px/1 "Noto Sans JP";color:var(--c);font-style:normal}
+.tile.wide{grid-column:1/-1;min-height:0;display:flex;align-items:center;gap:14px}
+.tile.wide b{margin:0}.tile.wide i{position:static}
+.tile:disabled{opacity:.45;cursor:default}
+.tile em{position:absolute;top:12px;right:12px;background:var(--acc);color:#1a1714;font:700 12px "Noto Sans KR";font-style:normal;border-radius:99px;padding:2px 9px}
+.tools{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.btn{border:0;border-radius:14px;padding:12px 18px;font:700 16px "Noto Sans KR";min-height:48px;cursor:pointer;background:var(--c);color:#fff}
+.btn.ghost{background:var(--card);color:var(--ink)}
+.btn:focus-visible,.opt:focus-visible,.tile:focus-visible,.chip:focus-visible,.pc:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.note{font-size:13px;color:var(--mute);margin-top:14px}
+/* play */
+.bar{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.bar .prog{flex:1;height:8px;background:var(--card);border-radius:9px;overflow:hidden}
+.bar .prog div{height:100%;background:var(--c);transition:width .3s}
+.bar .sc{font-weight:900;white-space:nowrap}
+.x{border:0;background:var(--card);color:var(--ink);width:44px;height:44px;border-radius:12px;font-size:20px;cursor:pointer}
+.card{background:var(--card);border-radius:22px;padding:26px 20px;text-align:center;margin-bottom:14px;border-bottom:5px solid var(--c)}
+.card .ask{font-size:13px;color:var(--mute);font-weight:700}
+.card .big{font-size:clamp(26px,7vw,40px);font-weight:800;line-height:1.2;margin:8px 0 2px;word-break:keep-all}
+.card .big.long{font-size:clamp(19px,5vw,26px)}
+.card .hint{color:var(--mute);font-size:15px}
+.say{border:0;background:var(--c);color:#fff;border-radius:999px;width:84px;height:84px;font-size:34px;cursor:pointer;margin:10px auto 0;display:block}
+.opts{display:grid;gap:10px}
+.opt{border:2px solid var(--line);background:var(--bg);color:var(--ink);border-radius:16px;padding:14px 16px;font:700 18px "Noto Sans KR";text-align:left;min-height:56px;cursor:pointer;word-break:keep-all}
+.opt.ok{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--bg))}
+.opt.bad{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--bg))}
+.opt:disabled{cursor:default}
+.reveal{margin-top:14px;border-radius:16px;padding:14px 16px;background:var(--card);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.reveal .w{flex:1 1 200px}
+.reveal .w b{font-size:20px;display:block}
+.reveal .w small{color:var(--mute);font-size:14px;display:block}
+.reveal .rule{flex-basis:100%;font-size:14px;border-top:1px solid var(--line);padding-top:8px}
+.ok-t{color:var(--ok)}.bad-t{color:var(--bad)}
+.ans{min-height:64px;border:2px dashed var(--line);border-radius:16px;padding:8px;display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-content:flex-start}
+.pool{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:12px}
+.pc{border:0;background:var(--bg);color:var(--ink);box-shadow:inset 0 0 0 2px var(--line),0 3px 0 var(--line);border-radius:12px;padding:9px 13px;font:800 20px "Noto Sans JP","Noto Sans KR";min-width:46px;min-height:48px;cursor:pointer}
+.ans .pc{background:var(--c);color:#fff;box-shadow:none}
+.pc.used{visibility:hidden}
+.ans.ok{border-color:var(--ok)}.ans.bad{border-color:var(--bad)}
+.mgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.mt{border:2px solid var(--line);background:var(--bg);color:var(--ink);border-radius:14px;min-height:78px;padding:8px;font:700 15px "Noto Sans KR";cursor:pointer;word-break:keep-all;line-height:1.3}
+.mt.w{font-family:"Noto Sans JP","Noto Sans KR";font-size:17px}
+.mt.sel{border-color:var(--c);background:color-mix(in srgb,var(--c) 14%,var(--bg))}
+.mt.done{visibility:hidden}
+.mt.bad{border-color:var(--bad);animation:sh .3s}
+@keyframes sh{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.res{text-align:center}
+.res .num{font-size:64px;font-weight:900;line-height:1;color:var(--c)}
+.miss{text-align:left;margin:16px 0;padding:0;list-style:none}
+.miss li{padding:10px 0;border-bottom:1px solid var(--line)}
+.miss small{color:var(--mute)}
+dialog{border:0;border-radius:20px;padding:20px;width:min(560px,94vw);background:var(--bg);color:var(--ink)}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+textarea{width:100%;min-height:180px;font:16px/1.5 "Noto Sans JP","Noto Sans KR";border:2px solid var(--line);border-radius:12px;padding:10px;background:var(--bg);color:var(--ink)}
+.hide{display:none!important}
+@media(max-width:420px){.grid{gap:9px}.tile{padding:14px}.mt{font-size:14px;min-height:70px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>외국어 복습 게임</h1>
+    <div class="seg" role="tablist">
+      <button id="L-jp" class="on" data-l="jp">일본어</button>
+      <button id="L-en" data-l="en">영어</button>
+    </div>
+  </div>
+  <div class="sub"><span id="sub"></span></div>
+</header>
+<main>
+  <section id="home">
+    <div class="chips" id="chips"></div>
+    <div class="grid" id="modes"></div>
+    <div class="tools">
+      <a class="btn ghost" href="https://github.com/cool-running/language/tree/main/notes" style="text-decoration:none;display:inline-flex;align-items:center">노트 보기</a>
+      <button class="btn ghost" id="autoBtn"></button>
+    </div>
+    <p class="note">문제는 GitHub의 notes 폴더에 있는 노트에서 자동으로 만들어져요. 오답 노트는 이 기기의 브라우저에 저장돼요.</p>
+  </section>
+  <section id="play" class="hide"></section>
+</main>
+
+<script>
+{
+let JP=[],EN=[],ENX=[],KANA=[],JTRAP=[],JPS=[],LOADED=false,LOADERR='';
+const clean=t=>t.replace(/\*\*/g,'').replace(/\\([~*_|])/g,'$1').trim();
+function tables(md){
+  const out=[];let cur=null;
+  for(const raw of md.split(/\r?\n/)){
+    const l=raw.trim();
+    if(l.startsWith('|')){
+      const cells=l.replace(/^\||\|$/g,'').split('|').map(clean);
+      if(cells.every(c=>/^:?-{3,}:?$/.test(c)))continue;
+      if(!cur){cur={head:cells,rows:[]};out.push(cur)}else cur.rows.push(cells);
+    }else cur=null;
+  }
+  return out;
+}
+function parseJP(md,s){
+  for(const t of tables(md)){
+    const h=t.head.join('|');
+    if(t.head[0]==='행'){for(const r of t.rows)for(const c of r.slice(1)){const m=c.match(/^(\S+)\s+(.+)$/);if(m&&!KANA.some(k=>k.k===m[1]))KANA.push({k:m[1],p:m[2],m:m[2],kana:1,s})}}
+    else if(h.includes('헷갈린')){for(const r of t.rows)if(r[0]&&r[1]&&r[2])JTRAP.push({k:r[0],p:r[1],t:r[2].split(/\s*,\s*/).filter(Boolean),h:r[3]||'',s})}
+    else if(h.includes('히라가나')&&h.includes('뜻')){for(const r of t.rows)if(r[0])JP.push(r.length>=3?{k:r[0],p:r[1],m:r[r.length-1],s}:{k:r[0],p:'',m:r[1],s})}
+  }
+}
+function parseEN(md,s){
+  for(const t of tables(md)){
+    const h=t.head;
+    if(h[0]&&h[0].includes('자주 한 실수')){
+      for(const r of t.rows){
+        if(!r[1]||(r[2]||'').includes('졸업'))continue;
+        const ctx=(r[0].match(/\(([^)]*)\)\s*$/)||[])[1]||'';
+        const w=r[0].replace(/\s*\([^)]*\)\s*$/,'').split(' / '),ri=r[1].split(' / ');
+        const pairs=w.length===ri.length?w.map((x,i)=>[x,ri[i]]):[[w.join(' / '),r[1]]];
+        for(const [x,y] of pairs)if(x!==y&&!ENX.some(z=>z.r===y))ENX.push({w:x,r:y,m:r[2]||'',k:ctx});
+      }
+      continue;
+    }
+    const ei=h.findIndex(c=>c.includes('표현')),mi=h.findIndex(c=>c==='뜻');
+    if(ei<0||mi<0)continue;
+    for(const r of t.rows)if(r[ei]&&r[mi]&&/[A-Za-z]/.test(r[ei])&&!EN.some(x=>x.e===r[ei]))EN.push({e:r[ei],m:r[mi],s});
+  }
+}
+async function loadNotes(){
+  try{
+    const idxr=await fetch('notes/index.json',{cache:'no-cache'});if(!idxr.ok)throw new Error('index');
+    const ix=await idxr.json();
+    const job=async(lang,f)=>{const r=await fetch('notes/'+f.file.split('/').map(encodeURIComponent).join('/'),{cache:'no-cache'});if(!r.ok)return;const md=await r.text();(lang==='일본어'?parseJP:parseEN)(md,f.label)};
+    const jobs=[];for(const lang of Object.keys(ix))for(const f of ix[lang])jobs.push([lang,f]);
+    for(const [l,f] of jobs)await job(l,f);
+    for(const t of JTRAP){const w=JP.find(x=>x.k===t.k);if(w){t.m=w.m;t.s=w.s}else{const k=KANA.find(x=>x.k===t.k);t.m=t.p;if(k)t.kana=1}}
+    LOADED=true;
+  }catch(e){LOADERR='노트를 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.'}
+  home();
+}
+const KEY='langGame1';
+let S={lang:'jp',ses:'all',wrong:{},custom:{jp:[],en:[]},auto:true};
+try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(v)S=Object.assign(S,v)}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const $=id=>document.getElementById(id);
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const word=x=>x.k||x.e;
+const iid=x=>S.lang+'|'+word(x);
+const xid=x=>'x|'+x.r;
+const tts='speechSynthesis' in window;
+
+function all(){return S.lang==='jp'?JP:EN}
+function items(){const a=all();return S.ses==='all'?a:a.filter(x=>String(x.s)===S.ses)}
+function sessions(){return [...new Set(all().map(x=>String(x.s)))]}
+function wrongIds(){return Object.keys(S.wrong).filter(k=>k.startsWith(S.lang+'|')||(S.lang==='en'&&k.startsWith('x|')))}
+function markWrong(id){S.wrong[id]=Math.min(3,(S.wrong[id]||0)+1);save()}
+function markRight(id){if(S.wrong[id]){if(--S.wrong[id]<=0)delete S.wrong[id];save()}}
+
+function say(t){if(!tts)return;try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang=S.lang==='jp'?'ja-JP':'en-US';u.rate=.85;const v=speechSynthesis.getVoices().find(v=>v.lang.replace('_','-').toLowerCase().startsWith(u.lang.slice(0,2)));if(v)u.voice=v;speechSynthesis.speak(u)}catch(e){}}
+
+/* ---------- home ---------- */
+function traps(){return S.lang==='jp'?JTRAP.filter(x=>S.ses==='all'||x.kana||String(x.s)===S.ses):ENX}
+const lab=s=>s==='all'?'전체':s;
+const findAny=id=>all().concat(S.lang==='jp'?KANA:[]).find(y=>iid(y)===id);
+function buildPool(){
+  if(S.lang==='jp'){
+    const s=JPS.filter(x=>S.ses==='all'||String(x.s)===S.ses).map(x=>({parts:x.c,sep:' ',tgt:x.c.join(' '),p:x.p,m:x.m,id:'jp|'+x.c.join(' ')}));
+    const w=items().filter(x=>!/[一-龯]/.test(x.k)).map(x=>{const sp=x.k.includes(' ');const parts=sp?x.k.split(' '):Array.from(x.k);return {parts,sep:sp?' ':'',tgt:x.k,p:x.p,m:x.m,id:iid(x)}}).filter(x=>x.parts.length>=2&&x.parts.length<=10);
+    return s.concat(w)}
+  return items().filter(x=>!/ \/ |\(/.test(x.e)).map(x=>{const e=x.e.replace(/^\.\.\./,'');return {parts:e.split(' '),sep:' ',tgt:e,m:x.m,id:iid(x)}}).filter(x=>x.parts.length>=3&&x.parts.length<=11)}
+const MODES=[
+ {id:'m2w',g:'?',t:'뜻 보고 고르기',d:'한국어 뜻을 보고 맞는 표현 고르기'},
+ {id:'w2m',g:'あ',t:'읽고 뜻 고르기',d:'표현을 읽고 뜻 고르기'},
+ {id:'kana',g:'か',t:'글자 읽기',d:'히라가나 한 글자 ↔ 한글 소리'},
+ {id:'listen',g:'♪',t:'듣고 고르기',d:'발음을 듣고 맞는 표현 고르기'},
+ {id:'build',g:'▤',t:'순서 맞추기',d:'조각을 순서대로 눌러 완성하기'},
+ {id:'match',g:'□',t:'짝맞추기',d:'표현과 뜻 6쌍 빨리 찾기'},
+ {id:'trap',g:'!',t:'함정 피하기',d:''},
+ {id:'review',g:'↺',t:'오답 복습',d:'틀린 것만 다시. 맞히면 목록에서 빠져요'}];
+function home(){
+  if(!LOADED){$('sub').textContent=LOADERR||'노트 불러오는 중…';$('modes').innerHTML=LOADERR?`<p>${esc(LOADERR)}</p>`:'';$('chips').innerHTML='';return}
+  document.body.classList.toggle('en',S.lang==='en');
+  $('L-jp').classList.toggle('on',S.lang==='jp');$('L-en').classList.toggle('on',S.lang==='en');
+  if(S.ses!=='all'&&!sessions().includes(S.ses))S.ses='all';
+  const n=items().length,wr=wrongIds().length;
+  $('sub').textContent=`${lab(S.ses)} ${n}개 · 오답 노트 ${wr}개`;
+  $('chips').innerHTML=['all',...sessions()].map(s=>`<button class="chip${S.ses===s?' on':''}" data-s="${esc(s)}">${esc(lab(s))}</button>`).join('');
+  const bp=buildPool().length,tp=traps().length;
+  $('modes').innerHTML=MODES.map(m=>{
+    let d=m.d,dis=false;
+    if(m.id==='kana'&&S.lang!=='jp')return '';
+    if(m.id==='w2m'&&S.lang==='en')m={...m,g:'Aa'};
+    if(m.id==='trap')d=S.lang==='jp'?'헷갈리는 글자(か↔き, さ↔ち, な↔た…) 중 맞는 읽기':'자주 한 실수 vs 맞는 문장';
+    if(m.id==='listen'&&!tts){dis=true;d='이 화면에서는 음성 기능을 쓸 수 없어요'}
+    if(m.id==='build'&&!bp)dis=true; if(m.id==='trap'&&!tp)dis=true;
+    if(m.id==='review'&&!wr){dis=true;d='아직 틀린 게 없어요'}
+    if(['m2w','w2m','listen','match'].includes(m.id)&&n<4){dis=true;d='4개 이상 있어야 해요'}
+    return `<button class="tile${m.id==='review'?' wide':''}" data-m="${m.id}"${dis?' disabled':''}><i>${m.g}</i><b>${m.t}</b><span>${esc(d)}</span>${m.id==='review'&&wr?`<em>${wr}</em>`:''}</button>`}).join('');
+  $('autoBtn').textContent='정답 때 자동 발음: '+(S.auto&&tts?'켜짐':'꺼짐');
+  $('autoBtn').classList.toggle('hide',!tts);
+  $('home').classList.remove('hide');$('play').classList.add('hide');
+}
+
+/* ---------- game engine ---------- */
+let G=null;
+function opts(x,pool,key){const k=key(x);const o=shuf(pool.filter(y=>key(y)!==k));const pick=[];for(const y of o){if(!pick.some(p=>key(p)===key(y)))pick.push(y);if(pick.length===3)break}return shuf([x,...pick])}
+function start(mode){
+  const pool=items(),full=all();
+  const src=pool.length>=4?pool:full;
+  let qs=[];
+  if(['m2w','w2m','listen'].includes(mode))qs=shuf(pool).slice(0,10).map(x=>({type:'quiz',dir:mode,x,o:opts(x,src,mode==='w2m'?(y=>y.m):word)}));
+  if(mode==='kana')qs=shuf(KANA).slice(0,10).map(x=>{const d=Math.random()<.5?'m2w':'w2m';return {type:'quiz',dir:d,x,o:opts(x,KANA,d==='w2m'?(y=>y.m):word)}});
+  if(mode==='build')qs=shuf(buildPool()).slice(0,6).map(b=>({type:'build',b}));
+  if(mode==='trap')qs=shuf(traps()).slice(0,10).map(x=>({type:'trap',x}));
+  if(mode==='review'){
+    qs=shuf(wrongIds()).slice(0,12).map(id=>{
+      if(id.startsWith('x|')){const x=ENX.find(y=>xid(y)===id);return x&&{type:'trap',x}}
+      const x=findAny(id);if(!x)return null;
+      const d=Math.random()<.5?'m2w':'w2m',src2=x.kana?KANA:full;return {type:'quiz',dir:d,x,o:opts(x,src2,d==='w2m'?(y=>y.m):word)}}).filter(Boolean)}
+  if(mode==='match'){G={mode,score:0,total:6,miss:[],t0:Date.now()};return renderMatch()}
+  if(!qs.length)return home();
+  G={mode,qs,i:0,score:0,total:qs.length,miss:[]};
+  $('home').classList.add('hide');$('play').classList.remove('hide');renderQ();
+}
+function bar(){const done=G.i??0;return `<div class="bar"><button class="x" id="quit" aria-label="그만하기">✕</button><div class="prog"><div style="width:${done/G.total*100}%"></div></div><span class="sc">${G.score} / ${G.total}</span></div>`}
+function jf(){return S.lang==='jp'?' jpf':''}
+function renderQ(){
+  if(G.i>=G.qs.length)return result();
+  const q=G.qs[G.i],P=$('play');let h=bar();
+  if(q.type==='quiz'){
+    const x=q.x,lw=word(x).length>22;
+    if(q.dir==='m2w')h+=`<div class="card"><div class="ask">${x.kana?'이 소리의 글자는?':'이 뜻의 표현은?'}</div><div class="big${x.kana?'':' long'}">${esc(x.m)}</div></div>`;
+    if(q.dir==='w2m')h+=`<div class="card"><div class="ask">${x.kana?'어떻게 읽을까요?':'무슨 뜻일까요?'}</div><div class="big${lw?' long':''}${jf()}">${esc(word(x))}</div></div>`;
+    if(q.dir==='listen')h+=`<div class="card"><div class="ask">잘 듣고 맞는 표현을 고르세요</div><button class="say" id="replay" aria-label="다시 듣기">▶</button></div>`;
+    h+=`<div class="opts">${q.o.map((y,i)=>`<button class="opt${q.dir==='w2m'?'':jf()}" data-i="${i}">${esc(q.dir==='w2m'?y.m:word(y))}</button>`).join('')}</div><div id="rv"></div>`;
+  }
+  if(q.type==='trap'){
+    const x=q.x,jp=S.lang==='jp';
+    q.o=q.o||shuf(jp?[x.p,...x.t]:[x.w,x.r]);
+    h+=`<div class="card"><div class="ask">${jp?'어떻게 읽을까요?':'맞는 문장은?'+(x.k?' — '+esc(x.k):'')}</div>${jp?`<div class="big jpf">${esc(x.k)}</div>`:''}</div>`;
+    h+=`<div class="opts">${q.o.map((t,i)=>`<button class="opt" data-i="${i}">${esc(t)}</button>`).join('')}</div><div id="rv"></div>`;
+  }
+  if(q.type==='build'){
+    const b=q.b;q.order=q.order||(()=>{let o;do{o=shuf(b.parts.map((_,i)=>i))}while(b.parts.length>1&&o.every((v,i)=>b.parts[v]===b.parts[i]));return o})();q.picked=q.picked||[];
+    h+=`<div class="card"><div class="ask">순서대로 눌러서 완성하세요</div><div class="big long">${esc(b.m)}</div>${b.p?`<div class="hint">${esc(b.p)}</div>`:''}</div>
+    <div class="ans" id="ans">${q.picked.map(i=>`<button class="pc${jf()}" data-a="${i}">${esc(b.parts[i])}</button>`).join('')}</div>
+    <div class="pool">${q.order.map(i=>`<button class="pc${jf()}${q.picked.includes(i)?' used':''}" data-p="${i}">${esc(b.parts[i])}</button>`).join('')}</div>
+    <div class="tools" id="bt"><button class="btn" id="chk"${q.picked.length===b.parts.length?'':' disabled'}>확인</button><button class="btn ghost" id="giveup">모르겠어요</button></div><div id="rv"></div>`;
+  }
+  P.innerHTML=h;
+  if(q.type==='quiz'&&q.dir==='listen'&&!q.played){q.played=1;setTimeout(()=>say(word(q.x)),250)}
+}
+function reveal(ok,q){
+  let w,sub='',rule='';
+  if(q.type==='quiz'){w=word(q.x);sub=q.x.kana?q.x.p:(q.x.p?q.x.p+' · ':'')+q.x.m}
+  if(q.type==='trap'){const x=q.x;if(S.lang==='jp'){w=x.k;sub=x.kana?x.p:x.p+' · '+x.m;rule=x.h}else{w=x.r;sub=x.k;rule='틀린 문장: '+x.w+' → '+x.m}}
+  if(q.type==='build'){w=q.b.tgt;sub=(q.b.p?q.b.p+' · ':'')+q.b.m}
+  const spk=S.lang==='jp'&&q.type==='trap'?q.x.k:w;
+  $('rv').innerHTML=`<div class="reveal"><div class="w"><span class="${ok?'ok-t':'bad-t'}" style="font-weight:900">${ok?'정답!':'아쉬워요'}</span><b class="${S.lang==='jp'?'jpf':''}">${esc(w)}</b><small>${esc(sub)}</small></div>${tts?'<button class="btn ghost" id="spk">발음 듣기</button>':''}<button class="btn" id="next">다음</button>${rule?`<div class="rule">${esc(rule)}</div>`:''}</div>`;
+  $('rv').dataset.say=spk;
+  if(S.auto&&tts)say(spk);
+  G.score+=ok?1:0;
+  const id=q.type==='trap'?(S.lang==='jp'?iid(q.x):xid(q.x)):q.type==='quiz'?iid(q.x):q.b.id;
+  if(ok)markRight(id);else{markWrong(id);G.miss.push({w,sub})}
+  const pr=document.querySelector('.prog div');if(pr)pr.style.width=((G.i+1)/G.total*100)+'%';
+  document.querySelector('.sc').textContent=G.score+' / '+G.total;
+  $('next').focus({preventScroll:true});
+}
+function pickOpt(i){
+  const q=G.qs[G.i];if(q.done)return;q.done=1;
+  const bs=[...document.querySelectorAll('.opt')];bs.forEach(b=>b.disabled=true);
+  let ci,ok;
+  if(q.type==='quiz'){ci=q.o.indexOf(q.x)}
+  else ci=q.o.indexOf(S.lang==='jp'?q.x.p:q.x.r);
+  ok=i===ci;bs[ci].classList.add('ok');if(!ok)bs[i].classList.add('bad');
+  reveal(ok,q);
+}
+function buildTap(e){
+  const q=G.qs[G.i];if(q.done)return;
+  const p=e.target.closest('[data-p]'),a=e.target.closest('[data-a]');
+  if(p&&!p.classList.contains('used')){q.picked.push(+p.dataset.p);renderQ()}
+  else if(a){q.picked.splice(q.picked.indexOf(+a.dataset.a),1);renderQ()}
+}
+function buildCheck(give){
+  const q=G.qs[G.i];if(q.done)return;q.done=1;
+  const got=q.picked.map(i=>q.b.parts[i]).join(q.b.sep),ok=!give&&got===q.b.tgt;
+  $('ans').classList.add(ok?'ok':'bad');$('bt').classList.add('hide');
+  document.querySelectorAll('.pc').forEach(b=>b.disabled=true);reveal(ok,q);
+}
+function renderMatch(){
+  const pool=items();const src=[];for(const x of shuf(pool)){if(!src.some(y=>word(y)===word(x)||y.m===x.m))src.push(x);if(src.length===6)break}
+  G.total=src.length;G.pairs=src;G.sel=null;G.found=0;G.bad=new Set();
+  const tiles=shuf(src.flatMap((x,i)=>[{i,t:word(x),w:1},{i,t:x.m,w:0}]));
+  $('home').classList.add('hide');$('play').classList.remove('hide');
+  $('play').innerHTML=bar()+`<div class="card" style="padding:14px"><div class="ask">표현과 뜻을 차례로 눌러 짝을 맞추세요</div></div><div class="mgrid">${tiles.map((t,k)=>`<button class="mt${t.w?' w':''}" data-k="${k}" data-i="${t.i}" data-w="${t.w}">${esc(t.t)}</button>`).join('')}</div>`;
+}
+function matchTap(b){
+  if(!b||b.classList.contains('done'))return;
+  const s=G.sel;
+  if(!s||s===b||s.dataset.w===b.dataset.w){if(s)s.classList.remove('sel');G.sel=s===b?null:b;if(G.sel)b.classList.add('sel');if(b.dataset.w==='1'&&G.sel)say(b.textContent);return}
+  if(s.dataset.i===b.dataset.i){[s,b].forEach(x=>{x.classList.remove('sel');x.classList.add('done')});G.found++;
+    const x=G.pairs[+b.dataset.i];if(!G.bad.has(+b.dataset.i))markRight(iid(x));
+    G.score=G.found-G.bad.size<0?0:G.found-[...G.bad].filter(i=>i<99).length;
+    document.querySelector('.sc').textContent=G.found+' / '+G.total;document.querySelector('.prog div').style.width=G.found/G.total*100+'%';
+    if(G.found===G.total){G.score=G.total-G.bad.size;G.sec=Math.round((Date.now()-G.t0)/1000);setTimeout(result,350)}}
+  else{[s,b].forEach(x=>{x.classList.remove('sel');x.classList.add('bad');setTimeout(()=>x.classList.remove('bad'),400)});
+    for(const t of [s,b]){const i=+t.dataset.i;if(!G.bad.has(i)){G.bad.add(i);const x=G.pairs[i];markWrong(iid(x));G.miss.push({w:word(x),sub:(x.p?x.p+' · ':'')+x.m})}}}
+  G.sel=null;
+}
+function result(){
+  const pct=G.total?G.score/G.total:0;
+  const msg=pct===1?'완벽해요!':pct>=.7?'잘했어요! 틀린 것만 한 번 더 보면 끝.':'오답 복습으로 한 번 더 해 봐요.';
+  $('play').innerHTML=`<div class="res"><div class="card"><div class="ask">${G.mode==='match'?'실수 없이 맞춘 짝':'맞힌 개수'}</div><div class="num">${G.score}<span style="font-size:28px;color:var(--mute)"> / ${G.total}</span></div><div class="hint">${msg}${G.sec?` · ${G.sec}초`:''}</div></div></div>
+  ${G.miss.length?`<h2 style="font-size:18px;margin:6px 0 0">틀린 것 (오답 노트에 저장됨)</h2><ul class="miss">${G.miss.map(m=>`<li><b class="${S.lang==='jp'?'jpf':''}">${esc(m.w)}</b><br><small>${esc(m.sub)}</small></li>`).join('')}</ul>`:''}
+  <div class="tools"><button class="btn" id="again">한 번 더</button>${wrongIds().length?'<button class="btn ghost" id="rev">오답 복습</button>':''}<button class="btn ghost" id="home2">처음으로</button></div>`;
+}
+
+/* ---------- events ---------- */
+document.querySelector('.seg').addEventListener('click',e=>{const b=e.target.closest('[data-l]');if(!b)return;S.lang=b.dataset.l;S.ses='all';save();home()});
+$('chips').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(!b)return;S.ses=b.dataset.s;save();home()});
+$('modes').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(b&&!b.disabled)start(b.dataset.m)});
+$('autoBtn').addEventListener('click',()=>{S.auto=!S.auto;save();home()});
+$('play').addEventListener('click',e=>{
+  const t=e.target;
+  if(t.closest('#quit')||t.closest('#home2'))return home();
+  if(t.closest('#again'))return start(G.mode);
+  if(t.closest('#rev'))return start('review');
+  if(t.closest('#replay'))return say(word(G.qs[G.i].x));
+  if(t.closest('#spk'))return say($('rv').dataset.say);
+  if(t.closest('#next')){G.i++;return renderQ()}
+  if(G.mode==='match')return matchTap(t.closest('.mt'));
+  const o=t.closest('.opt');if(o)return pickOpt(+o.dataset.i);
+  if(t.closest('#chk'))return buildCheck(false);
+  if(t.closest('#giveup'))return buildCheck(true);
+  if(t.closest('.pc'))return buildTap(e);
+});
+if(tts)try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>{}}catch(e){}
+home();loadNotes();
+}
+</script>
+</body>
+</html>
